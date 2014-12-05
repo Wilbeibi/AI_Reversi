@@ -9,6 +9,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <iomanip>
 //#include <utility>
 
 /*
@@ -63,7 +64,30 @@ std::vector<std::pair<int, int> > get_directions(int x, int y) {
 }
 
 //(x,y) ---> board[y][x]
-std::vector<int> get_candidates(int board[][8]) {
+std::vector<int> get_candidates(int board[][8], int player) {
+    /*
+     candidate(x,y):(2,2),(3,2),(4,2),(5,2)
+     (2,3)             (5,3)
+     (2,4)             (5,4)
+     (2,5),(3,5),(4,5),(5,5)
+     */
+    /*
+    std::vector<std::pair<int, int>> directions;
+    directions.push_back(std::pair<int, int> (0, -1));
+    directions.push_back(std::pair<int, int> (1, -1));
+    directions.push_back(std::pair<int, int> (1, 0));
+    directions.push_back(std::pair<int, int> (1, 1));
+    directions.push_back(std::pair<int, int> (0, 1));
+    directions.push_back(std::pair<int, int> (-1, 1));
+    directions.push_back(std::pair<int, int> (-1, 0));
+    directions.push_back(std::pair<int, int> (-1, -1));
+    */
+    /*
+     (((y >= 1) && board[y-1][x] == -player)||((y >= 1 && x <= 6) && board[y-1][x+1] == -player)||
+     ((x <= 6) && board[y][x+1] == -player)||((y <= 6 && x <= 6) && board[y+1][x+1] == -player)||
+     ((y <= 6) && board[y+1][x] == -player)||((y <= 6 && x >= 1) && board[y+1][x-1] == -player)||
+     ((x >= 1) && board[y][x-1] == -player)||((y >= 1 && x >= 1) && board[y-1][x-1] == -player))
+     */
     std::vector<int> candidates;
     for (int y = 0; y < 8; y++) {
         for (int x = 0; x < 8; x++) {
@@ -77,6 +101,21 @@ std::vector<int> get_candidates(int board[][8]) {
         }
     }
     return candidates;
+}
+
+void printout(std::vector<int> candidate) {
+    int board[8][8];
+    memset(board, 0, sizeof(board));
+    for (auto it = candidate.begin(); it != candidate.end(); it++) {
+        board[*it/8][*it%8] = 1;
+    }
+    
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            std::cout << board[i][j] << " ";
+        }
+        std::cout << std::endl;
+    }
 }
 
 std::pair<int, int> get_score(int board[][8]) {
@@ -95,21 +134,74 @@ std::pair<int, int> get_score(int board[][8]) {
     return std::pair<int, int>(white_count, black_count);
 }
 
-//std::vector<pair::>
-
-void printout(std::vector<int> candidate) {
-    int board[8][8];
-    memset(board, 0, sizeof(board));
-    for (auto it = candidate.begin(); it != candidate.end(); it++) {
-        board[*it/8][*it%8] = 1;
-    }
-    
+void print_board(int board[][8]) {
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
+            std::cout << std::setw(2);
             std::cout << board[i][j] << " ";
         }
         std::cout << std::endl;
     }
+}
+
+std::vector<std::pair<int, int [][8]> > valid_candidates(int board[][8], int player) {
+    std::vector<std::pair<int, int>> directions;
+    directions.push_back(std::pair<int, int> (0, -1));
+    directions.push_back(std::pair<int, int> (1, -1));
+    directions.push_back(std::pair<int, int> (1, 0));
+    directions.push_back(std::pair<int, int> (1, 1));
+    directions.push_back(std::pair<int, int> (0, 1));
+    directions.push_back(std::pair<int, int> (-1, 1));
+    directions.push_back(std::pair<int, int> (-1, 0));
+    directions.push_back(std::pair<int, int> (-1, -1));
+    
+    std::vector<int> candidates;
+    candidates = get_candidates(board, player);
+    std::vector<std::pair<int, int [][8]>> valid_candidates;
+    
+    for (auto it = candidates.begin(); it != candidates.end(); it++) {
+        int temp_board[8][8];
+        memcpy(temp_board, board, sizeof(temp_board));
+        
+        int valid = false;
+        for (auto dir = directions.begin(); dir != directions.end(); dir++) {
+            int dx = (*dir).first;
+            int dy = (*dir).second;
+            int tx = *it%8 + dx;
+            int ty = *it/8 + dy;
+            int count = 0;
+            while (0 <= tx && tx <= 7 &&
+                   0 <= ty && ty <= 7) {
+                int tp = board[ty][tx];
+                if (tp == 0) {
+                    count = 0;
+                    break;
+                }
+                if (tp == player) {
+                    break;
+                }
+                count++;
+                tx += dx;
+                ty += dy;
+            }
+            
+            if (count != 0) {
+                valid = true;
+                for (int i = 0; i < count; i++) {
+                    tx -= dx;
+                    ty -= dy;
+                    temp_board[ty][tx] = player;
+                }
+                std::cout << "valid move for " << *it%8 << " " << *it/8 << std::endl;
+            }
+        }
+        if (valid) {
+            temp_board[*it/8][*it%8] = player;
+            print_board(temp_board);
+            //valid_candidates.push_back(std::pair<int, int [][8]>(*it, temp_board));
+        }
+    }
+    return valid_candidates;
 }
 
 int main(int argc, char **argv) {
@@ -118,10 +210,13 @@ int main(int argc, char **argv) {
     board[3][3] = board[4][4] = -1;
     board[3][4] = board[4][3] = 1;
     
+    //print_board(board);
+    int turn = -1;
     std::vector<int> candidate;
-    candidate = get_candidates(board);
+    valid_candidates(board, turn);
+    candidate = get_candidates(board, turn);
     std::pair<int, int> score = get_score(board);
     std::cout << "The score for white is " << score.first << " The score for black is " << score.second << std::endl;
     
-    printout(candidate);
+    //printout(candidate);
 }
