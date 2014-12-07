@@ -29,7 +29,7 @@ class BoardState:
             self._player = boardstate._player
             self._passed = boardstate._passed
         else:
-            # create a new board state
+            # create a new board state 
             # Note: x goes from 0 to 7, y goes from 0 to 7
             # _pieces is a list of pieces on the board; _pieces[x,y] = player no: 1 or 2
             # this is the opening state - 2 pieces for each player in center of board
