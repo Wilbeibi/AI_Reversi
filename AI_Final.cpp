@@ -144,7 +144,7 @@ void print_board(int board[][8]) {
     }
 }
 
-std::vector<std::pair<int, int [][8]> > valid_candidates(int board[][8], int player) {
+std::vector<std::pair<int, std::vector< std::pair<int, int> > > > valid_candidates(int board[][8], int player) {
     std::vector<std::pair<int, int>> directions;
     directions.push_back(std::pair<int, int> (0, -1));
     directions.push_back(std::pair<int, int> (1, -1));
@@ -157,11 +157,10 @@ std::vector<std::pair<int, int [][8]> > valid_candidates(int board[][8], int pla
     
     std::vector<int> candidates;
     candidates = get_candidates(board, player);
-    std::vector<std::pair<int, int [][8]>> valid_candidates;
+    std::vector<std::pair<int, std::vector< std::pair<int, int> > > > valid_candidates;
     
     for (auto it = candidates.begin(); it != candidates.end(); it++) {
-        int temp_board[8][8];
-        memcpy(temp_board, board, sizeof(temp_board));
+        std::vector<std::pair<int, int> > flip;
         
         int valid = false;
         for (auto dir = directions.begin(); dir != directions.end(); dir++) {
@@ -190,33 +189,63 @@ std::vector<std::pair<int, int [][8]> > valid_candidates(int board[][8], int pla
                 for (int i = 0; i < count; i++) {
                     tx -= dx;
                     ty -= dy;
-                    temp_board[ty][tx] = player;
+                    flip.push_back(std::pair<int, int> (tx, ty));
                 }
                 std::cout << "valid move for " << *it%8 << " " << *it/8 << std::endl;
             }
         }
         if (valid) {
-            temp_board[*it/8][*it%8] = player;
-            print_board(temp_board);
-            //valid_candidates.push_back(std::pair<int, int [][8]>(*it, temp_board));
+            flip.push_back(std::pair<int, int> (*it%8, *it/8));
+            valid_candidates.push_back(std::pair<int, std::vector<std::pair<int, int>>> (*it, flip));
         }
     }
     return valid_candidates;
 }
 
+//(x,y) is denoted by board[y][x]
+void make_move(int board[][8], int player) {
+    std::vector<std::pair<int, std::vector< std::pair<int, int> > > > candids = valid_candidates(board, player);
+    for (auto it = candids.begin(); it != candids.end(); it++) {
+        int temp_board[8][8];
+        memcpy(temp_board, board, sizeof(temp_board));
+        int move_x = (*it).first%8;
+        int move_y = (*it).first/8;
+        std::cout << "move(" << move_x << ", " << move_y << "):" << std::endl;
+        for (auto flip_it = (*it).second.begin(); flip_it != (*it).second.end(); flip_it++) {
+            temp_board[(*flip_it).second][(*flip_it).first] = player;
+        }
+        print_board(temp_board);
+    }
+}
+
+int expand(std::string s, int left, int right) {
+    while (left >= 0 && right < s.size() && s[left] == s[right]) {
+        left--;
+        right++;
+    }
+    std::cout << left << std::endl;
+    return right - left - 1;
+}
+
+int main(int argc, char **argv) {
+    std::cout << expand("a", 0, 0) << std::endl;
+    std::cout << INT_MAX / 10 << std::endl;
+}
+/*
 int main(int argc, char **argv) {
     int board[8][8];
     memset(board, 0, sizeof(board));
     board[3][3] = board[4][4] = -1;
     board[3][4] = board[4][3] = 1;
     
-    //print_board(board);
     int turn = -1;
     std::vector<int> candidate;
-    valid_candidates(board, turn);
+    //valid_candidates(board, turn);
     candidate = get_candidates(board, turn);
     std::pair<int, int> score = get_score(board);
     std::cout << "The score for white is " << score.first << " The score for black is " << score.second << std::endl;
     
+    make_move(board, turn);
     //printout(candidate);
 }
+*/
