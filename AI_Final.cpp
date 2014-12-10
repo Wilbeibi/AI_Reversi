@@ -13,239 +13,195 @@
 //#include <utility>
 
 /*
-         0  1  2  3  4  5  6  7
+         1  2  3  4  5  6  7  8
       
-     0   0  0  0  0  0  0  0  0
+     10  0  0  0  0  0  0  0  0
  
-     1   0  0  0  0  0  0  0  0
+     20  0  0  0  0  0  0  0  0
  
-     2   0  0  0  0  0  0  0  0
+     30  0  0  0  0  0  0  0  0
  
-     3   0  0  0  w  b  0  0  0
+     40  0  0  0  w  b  0  0  0
  
-     4   0  0  0  b  w  0  0  0
+     50  0  0  0  b  w  0  0  0
  
-     5   0  0  0  0  0  0  0  0
+     60  0  0  0  0  0  0  0  0
  
-     6   0  0  0  0  0  0  0  0
+     70  0  0  0  0  0  0  0  0
  
-     7   0  0  0  0  0  0  0  0
+     80  0  0  0  0  0  0  0  0
  */
-std::vector<std::pair<int, int> > get_directions(int x, int y) {
-    std::vector<std::pair<int, int> > directions;
-    //x = index % 8, y = index / 8
-    
-    //North x y-1
-    
-    directions.push_back(std::make_pair<int, int>(0, x + (y - 1) * 8));
-    
-    //Northeast x+1 y-1
-    directions.push_back(std::make_pair<int, int>(0, x + 1 + (y - 1) * 8));
-    
-    //East x+1 y
-    directions.push_back(std::make_pair<int, int>(0, x + 1 + y * 8));
-    
-    //Southeast x+1 y+1
-    directions.push_back(std::make_pair<int, int>(0, x + 1 + (y + 1) * 8));
-    
-    //South x y+1
-    directions.push_back(std::make_pair<int, int>(0, x + (y + 1) * 8));
-    
-    //Southwest x-1 y+1
-    directions.push_back(std::make_pair<int, int>(0, x - 1 + (y + 1) * 8));
-    
-    //West x-1 y
-    directions.push_back(std::make_pair<int, int>(0, x - 1 + y * 8));
-    
-    //Northwest x-1 y-1
-    directions.push_back(std::make_pair<int, int>(0, x - 1 + (y - 1) * 8));
-    
-    return directions;
+const int ALLDIRECTIONS[8] = {-11, -10, -9, -1, 1, 9, 10, 11};
+const int BOARDSIZE = 100;
+const int EMPTY=0;
+const int WHITE=1;
+const int BLACK=2;
+const int OUTER=3;
+
+int validp(int move) {
+    if ((move >= 11) && (move <= 88) && (move%10 >= 1) && (move%10 <= 8))
+        return 1;
+    else return 0;
 }
 
-//(x,y) ---> board[y][x]
-std::vector<int> get_candidates(int board[][8], int player) {
-    /*
-     candidate(x,y):(2,2),(3,2),(4,2),(5,2)
-     (2,3)             (5,3)
-     (2,4)             (5,4)
-     (2,5),(3,5),(4,5),(5,5)
-     */
-    /*
-    std::vector<std::pair<int, int>> directions;
-    directions.push_back(std::pair<int, int> (0, -1));
-    directions.push_back(std::pair<int, int> (1, -1));
-    directions.push_back(std::pair<int, int> (1, 0));
-    directions.push_back(std::pair<int, int> (1, 1));
-    directions.push_back(std::pair<int, int> (0, 1));
-    directions.push_back(std::pair<int, int> (-1, 1));
-    directions.push_back(std::pair<int, int> (-1, 0));
-    directions.push_back(std::pair<int, int> (-1, -1));
-    */
-    /*
-     (((y >= 1) && board[y-1][x] == -player)||((y >= 1 && x <= 6) && board[y-1][x+1] == -player)||
-     ((x <= 6) && board[y][x+1] == -player)||((y <= 6 && x <= 6) && board[y+1][x+1] == -player)||
-     ((y <= 6) && board[y+1][x] == -player)||((y <= 6 && x >= 1) && board[y+1][x-1] == -player)||
-     ((x >= 1) && board[y][x-1] == -player)||((y >= 1 && x >= 1) && board[y-1][x-1] == -player))
-     */
-    std::vector<int> candidates;
-    for (int y = 0; y < 8; y++) {
-        for (int x = 0; x < 8; x++) {
-            if (!board[y][x]&&
-               (((y >= 1) && board[y-1][x])||((y >= 1 && x <= 6) && board[y-1][x+1])||
-                ((x <= 6) && board[y][x+1])||((y <= 6 && x <= 6) && board[y+1][x+1])||
-                ((y <= 6) && board[y+1][x])||((y <= 6 && x >= 1) && board[y+1][x-1])||
-                ((x >= 1) && board[y][x-1])||((y >= 1 && x >= 1) && board[y-1][x-1]))) {
-                candidates.push_back(x + y * 8);
+int op(int player) {
+    switch (player) {
+        case WHITE:
+            return BLACK;
+        case BLACK:
+            return WHITE;
+        default:
+            return 0;
+    }
+}
+
+int getbracket(int * board, int player, int dir, int pos) {
+    while (board[pos] == op(player)) {
+        pos += dir;
+    }
+    if (board[pos] == player) {
+        return pos;
+    }
+    else {
+        return 0;
+    }
+}
+
+int is_filp(int * board, int player, int dir, int move) {
+    int pos = move + dir;
+    if (board[pos] == op(player)) {
+        return getbracket(board, player, dir, pos);
+    }
+    else {
+        return 0;
+    }
+}
+
+bool islegal(int * board, int player, int move) {
+    if (validp(move)) {
+        return false;
+    }
+    
+    if (board[move] == EMPTY) {
+        for (int i = 0; i <= 7; i++) {
+            if (is_filp(board, player, ALLDIRECTIONS[i], move)) {
+                return true;
             }
         }
     }
-    return candidates;
+    return false;
 }
 
-void printout(std::vector<int> candidate) {
-    int board[8][8];
-    memset(board, 0, sizeof(board));
-    for (auto it = candidate.begin(); it != candidate.end(); it++) {
-        board[*it/8][*it%8] = 1;
-    }
-    
-    for (int i = 0; i < 8; i++) {
-        for (int j = 0; j < 8; j++) {
-            std::cout << board[i][j] << " ";
-        }
-        std::cout << std::endl;
+void makeflips(int * board, int player, int dir, int move) {
+    int bracketer, c;
+    bracketer = is_filp(board, player, dir, move);
+    if (bracketer) {
+        c = move + dir;
+        do {
+            board[c] = player;
+            c = c + dir;
+        } while (c != bracketer);
     }
 }
 
-std::pair<int, int> get_score(int board[][8]) {
-    int white_count, black_count;
-    white_count = black_count = 0;
-    for (int i = 0; i < 8; i++) {
-        for (int j = 0; j < 8; j++) {
-            if (board[i][j] == 1) {
-                white_count++;
-            }
-            else if (board[i][j] == -1) {
-                black_count++;
-            }
-        }
-    }
-    return std::pair<int, int>(white_count, black_count);
-}
-
-void print_board(int board[][8]) {
-    for (int i = 0; i < 8; i++) {
-        for (int j = 0; j < 8; j++) {
-            std::cout << std::setw(2);
-            std::cout << board[i][j] << " ";
-        }
-        std::cout << std::endl;
+void makemove(int * board, int player, int move) {
+    board[move] = player;
+    for (int i = 0; i <= 7; i++) {
+        makeflips(board, player, ALLDIRECTIONS[i], move);
     }
 }
 
-std::vector<std::pair<int, std::vector< std::pair<int, int> > > > valid_candidates(int board[][8], int player) {
-    std::vector<std::pair<int, int>> directions;
-    directions.push_back(std::pair<int, int> (0, -1));
-    directions.push_back(std::pair<int, int> (1, -1));
-    directions.push_back(std::pair<int, int> (1, 0));
-    directions.push_back(std::pair<int, int> (1, 1));
-    directions.push_back(std::pair<int, int> (0, 1));
-    directions.push_back(std::pair<int, int> (-1, 1));
-    directions.push_back(std::pair<int, int> (-1, 0));
-    directions.push_back(std::pair<int, int> (-1, -1));
-    
-    std::vector<int> candidates;
-    candidates = get_candidates(board, player);
-    std::vector<std::pair<int, std::vector< std::pair<int, int> > > > valid_candidates;
-    
-    for (auto it = candidates.begin(); it != candidates.end(); it++) {
-        std::vector<std::pair<int, int> > flip;
-        
-        int valid = false;
-        for (auto dir = directions.begin(); dir != directions.end(); dir++) {
-            int dx = (*dir).first;
-            int dy = (*dir).second;
-            int tx = *it%8 + dx;
-            int ty = *it/8 + dy;
-            int count = 0;
-            while (0 <= tx && tx <= 7 &&
-                   0 <= ty && ty <= 7) {
-                int tp = board[ty][tx];
-                if (tp == 0) {
-                    count = 0;
-                    break;
-                }
-                if (tp == player) {
-                    break;
-                }
-                count++;
-                tx += dx;
-                ty += dy;
-            }
-            
-            if (count != 0) {
-                valid = true;
-                for (int i = 0; i < count; i++) {
-                    tx -= dx;
-                    ty -= dy;
-                    flip.push_back(std::pair<int, int> (tx, ty));
-                }
-                std::cout << "valid move for " << *it%8 << " " << *it/8 << std::endl;
-            }
-        }
-        if (valid) {
-            flip.push_back(std::pair<int, int> (*it%8, *it/8));
-            valid_candidates.push_back(std::pair<int, std::vector<std::pair<int, int>>> (*it, flip));
-        }
-    }
-    return valid_candidates;
+int anylegalmove(int * board, int player) {
+    int move;
+    move = 11;
+    while (move <= 88 && !islegal(board, player, move)) move++;
+    if (move <= 88) return 1; else return 0;
 }
 
-//(x,y) is denoted by board[y][x]
-void make_move(int board[][8], int player) {
-    std::vector<std::pair<int, std::vector< std::pair<int, int> > > > candids = valid_candidates(board, player);
-    for (auto it = candids.begin(); it != candids.end(); it++) {
-        int temp_board[8][8];
-        memcpy(temp_board, board, sizeof(temp_board));
-        int move_x = (*it).first%8;
-        int move_y = (*it).first/8;
-        std::cout << "move(" << move_x << ", " << move_y << "):" << std::endl;
-        for (auto flip_it = (*it).second.begin(); flip_it != (*it).second.end(); flip_it++) {
-            temp_board[(*flip_it).second][(*flip_it).first] = player;
-        }
-        print_board(temp_board);
+int nextplayer(int * board, int cur_player) {
+    int next = op(cur_player);
+    if (anylegalmove(board, next)) {
+        return next;
     }
+    else if (anylegalmove(board, cur_player)) {
+        return cur_player;
+    }
+    return 0;
 }
 
-int expand(std::string s, int left, int right) {
-    while (left >= 0 && right < s.size() && s[left] == s[right]) {
-        left--;
-        right++;
+int * legalmoves(int * board, int player) {
+    int move, i, * moves;
+    moves = (int *)malloc(65 * sizeof(int));
+    moves[0] = 0;
+    i = 0;
+    for (move=11; move<=88; move++)
+        if (islegal(board, player, move)) {
+            i++;
+            moves[i]=move;
+        }
+    moves[0]=i;
+    return moves;
+}
+
+int diffeval(int * board, int player) {
+    int i;
+    int cnt = 0, opcnt = 0;
+    int opp = op(player);
+    for (i = 1; i <= 88; i++) {
+        if (board[i] == player) {
+            cnt++;
+        }
+        if (board[i] == opp) {
+            opcnt++;
+        }
     }
-    std::cout << left << std::endl;
-    return right - left - 1;
+    return cnt - opcnt;
+}
+
+int minmax(int * board, int player, int depth) {
+    int * moves;
+    moves = legalmoves(board, player);
+    if (depth == 0) {
+        return diffeval(board, player);
+    }
+    //return -minimax(board, player, depth - 1);
+}
+
+int getmove(int * board, int player) {
+    return 0;
+}
+
+int count(int * board, int player) {
+    int i;
+    int cnt = 0;
+    for (i = 1; i <= 88; i++) {
+        if (board[i] == player) {
+            cnt++;
+        }
+    }
+    return cnt;
+}
+
+void printboard (int * board) {
+    int row, col;
+    for (row = 1; row <= 8; row++) {
+        for (col=1; col <= 8; col++)
+            printf("%d ", board[col + (10 * row)]);
+        printf("\n");
+    }
 }
 
 int main(int argc, char **argv) {
-    std::cout << expand("a", 0, 0) << std::endl;
-    std::cout << INT_MAX / 10 << std::endl;
-}
-/*
-int main(int argc, char **argv) {
-    int board[8][8];
+    int board[BOARDSIZE];
     memset(board, 0, sizeof(board));
-    board[3][3] = board[4][4] = -1;
-    board[3][4] = board[4][3] = 1;
+    board[44] = board[55] = WHITE;
+    board[45] = board[54] = BLACK;
+    int turn = BLACK;
+    while (turn) {
+        int move = getmove(board, turn);//, );
+        makemove(board, turn, move);
+        turn = nextplayer(board, turn);
+    }
     
-    int turn = -1;
-    std::vector<int> candidate;
-    //valid_candidates(board, turn);
-    candidate = get_candidates(board, turn);
-    std::pair<int, int> score = get_score(board);
-    std::cout << "The score for white is " << score.first << " The score for black is " << score.second << std::endl;
-    
-    make_move(board, turn);
-    //printout(candidate);
+    printboard(board);
 }
-*/
