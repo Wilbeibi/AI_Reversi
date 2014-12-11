@@ -275,6 +275,7 @@ int legalp (int move, int player, int * board) {
    along a given direction, dir, are flipped.
 */
 
+/*
 void makeflips (int move, int player, int * board, int dir) {
   int bracketer, c;
   bracketer = wouldflip(move, player, board, dir);
@@ -286,18 +287,76 @@ void makeflips (int move, int player, int * board, int dir) {
         } while (c != bracketer);
   }
 }
+*/
 
 /* makemove actually places a players symbol (BLACK or WHITE)
 in the location indicated by move, and flips all opponent
 squares that are now bracketed (along all directions)
 */
 
+/*
 void makemove (int move, int player, int * board) {
   int i;
   board[move] = player;
   for (i=0; i<=7; i++) makeflips(move, player, board, ALLDIRECTIONS[i]);
 }
+*/
 
+/* makeflips is called by makemove. Once a player has decided
+ on a move, all (if any) opponent pieces that are bracketed
+ along a given direction, dir, are flipped.
+ */
+
+void makeflips (int move, int player, int * board, int dir) {
+    int bracketer, c;
+    bracketer = wouldflip(move, player, board, dir);
+    if (bracketer) {
+        c = move + dir;
+        do {
+            board[c] = player;
+            c = c + dir;
+        } while (c != bracketer);
+    }
+}
+
+void unfilps(int move, int player, int * board, int dir) {
+    int c;
+    c = move + dir;
+    int opp = opponent(player);
+    while (board[c + dir]) {
+        board[c] = opp;
+        c += dir;
+    }
+}
+
+/* makemove actually places a players symbol (BLACK or WHITE)
+ in the location indicated by move, and flips all opponent
+ squares that are now bracketed (along all directions)
+ */
+
+void undomove(int move, int player, int * board, int * dir) {
+    board[move] = EMPTY;
+    for (int i = 0; i <= 7; i++) {
+        if (dir[i]) {
+            unfilps(move, player, board, ALLDIRECTIONS[3]);
+        }
+    }
+}
+
+
+void makemove(int move, int player, int * board) {//, int * dir) {
+    board[move] = player;
+    for (int i = 0; i <= 7; i++) {
+        if (wouldflip(board, player, ALLDIRECTIONS[i], move)) {
+            makeflips(move, player, board, ALLDIRECTIONS[i]);
+            dir[i] = 1;
+        }
+        else {
+            dir[i] = 0;
+        }
+    }
+    return;
+}
 
 
 /* anylegalmove returns 1 if a player has at least one legal
@@ -513,74 +572,17 @@ and so that it randomly selects amongst the best moves for player.
 
 */
 
-
-int minmax (int player, int * board, int ply, int (* evalfn) (int, int *)) {
-  int i, max, ntm, newscore, bestmove, * moves, * newboard;
-  int maxchoice (int, int *, int, int (*) (int, int *)); 
-  int minchoice (int, int *, int, int (*) (int, int *)); 
-  moves = legalmoves(player, board); /* get all legal moves for player */
-  max = LOSS - 1;  /* any legal move will exceed this score */
-  for (i=1; i <= moves[0]; i++) {
-    newboard = copyboard(board); BOARDS = BOARDS + 1;
-    makemove(moves[i], player, newboard);
-    ntm = nexttoplay(newboard, player, 0);
-    if (ntm == 0) {  /* game over, so determine winner */
-         newscore = diffeval(player, newboard);
-         if (newscore > 0) newscore = WIN; /* a win for player */
-         if (newscore < 0) newscore = LOSS; /* a win for opp */
-    }
-    if (ntm == player)   /* opponent cannot move */
-       newscore = maxchoice(player, newboard, ply-1, evalfn);
-    if (ntm == opponent(player))
-       newscore = minchoice(player, newboard, ply-1, evalfn);
-    if (newscore > max) {
-        max = newscore;
-        bestmove = moves[i];  /* a better move found */
-    }
-    free(newboard);
-  }
-  free(moves);
-  return(bestmove);
-}
-
-
-
-/* If ply = 0, then maxchoice should return diffeval(player, board), 
-else the legal moves that can be made by player from board should
-be simulated. maxchoice should return the MAXIMUM board score
-from among the possibilities. The backed-up score of each 
-board (resulting from each player move) is determined 
-by function maxchoice if only player can move from the resulting board,
-by function minchoice if the opponent can move from the resulting board,
-is WIN if a win for player, a LOSS if a win for opponent, and
-a 0 if a draw. 
-
-If two or more boards tie for the maximum backed score, then return
-the move that appears first (lowest location) in the moves
-array leading to a maximum-score board.
-
-*/
-
-int maxchoice (int player, int * board, int ply, 
+int helper (int player, int * board, int ply, 
                int (* evalfn) (int, int *)) {
   int i, max, ntm, newscore, * moves, * newboard;
   int minchoice (int, int *, int, int (*) (int, int *)); 
   if (ply == 0) return((* evalfn) (player, board));
   moves = legalmoves(player, board);
-  max = LOSS - 1;
-  for (i=1; i <= moves[0]; i++) {
-    newboard = copyboard(board); BOARDS = BOARDS + 1;
+  max = -65;
+  for (i = 1; i <= moves[0]; i++) {
+    newboard = copyboard(board);
     makemove(moves[i], player, newboard);
-    ntm = nexttoplay(newboard, player, 0);
-    if (ntm == 0) {
-         newscore = diffeval(player, newboard);
-         if (newscore > 0) newscore = WIN;
-         if (newscore < 0) newscore = LOSS;
-    }
-    if (ntm == player) 
-       newscore = maxchoice(player, newboard, ply-1, evalfn);
-    if (ntm == opponent(player))
-       newscore = minchoice(player, newboard, ply-1, evalfn);
+    newscore = -helper(player, newboard, ply - 1, evalfn);
     if (newscore > max) max = newscore;
     free(newboard);
   }
@@ -588,58 +590,70 @@ int maxchoice (int player, int * board, int ply,
   return(max);
 }
 
+int minmax(int player, int * board, int ply, int (* evalfn) (int, int *)) {
+  int i, max, ntm, newscore, bestmove, * moves, * newboard;
+  int helper (int, int *, int, int (*) (int, int *)); 
+  moves  = legalmoves(player, board);
 
-/* If ply = 0, then minchoice should return the diffeval(player, board), 
-else the legal moves that can be made by player's opponent from board should
-be simulated. minchoice should return the MINIMUM backed up board score
-from among the possibilities. The backed up score of each board 
-(resulting from each opponent move) is determined by function maxchoice
-if player can move from the resulting board,
-by function minchoice if only the opponent can move
-from the resulting board, is WIN if a win for player, 
-a LOSS if a win for opponent, and a 0 if a draw. 
+  max = -65;
 
-If two or more BOARDS tie for the minimum score, then return
-the move that appears first (lowest location) in the moves
-array leading to a minimum-score board.
+  for (i = 1; i <= moves[0]; i++) {
+    newboard = copyboard(board);
+    makemove(moves[i], player, newboard);
+    newscore = helper(player, newboard, ply - 1, evalfn);
 
-Advanced: DO NOT worry about this, 
-but note that minchoice and maxchoice could be combined
-easily into a single function, finding the board
-with minimum score, s, is equivalent to finding the board
-with maximum -1 * s. One would have to add an additional
-parameter to decide whether to multiply by a -1 factor or
-not in computing a board score in this combined function.
-With a bit more work, one could combine all three
-functions, minmax, maxchoice, and minchoice, into a single
-function.
-
-*/
-
-int minchoice (int player, int * board, int ply, 
-               int (* evalfn) (int, int *)) {
-  int i, min, ntm, newscore, * moves, * newboard;
-  if (ply == 0) return((* evalfn) (player, board));
-  moves = legalmoves(opponent(player), board);
-  min = WIN+1;
-  for (i=1; i <= moves[0]; i++) {
-    newboard = copyboard(board); BOARDS = BOARDS + 1;
-    makemove(moves[i], opponent(player), newboard);
-    ntm = nexttoplay(newboard, opponent(player), 0);
-    if (ntm == 0) {
-         newscore = diffeval(player, newboard);
-         if (newscore > 0) newscore = WIN;
-         if (newscore < 0) newscore = LOSS;
+    if (newscore > max){
+      max = newscore;
+      bestmove = moves[i];
     }
-    if (ntm == player) 
-       newscore = maxchoice(player, newboard, ply-1, evalfn);
-    if (ntm == opponent(player))
-       newscore = minchoice(player, newboard, ply-1, evalfn);
-    if (newscore < min) min = newscore;
     free(newboard);
   }
   free(moves);
-  return(min);
+  return bestmove;
+}
+
+int ab_helper (int player, int * board, ,int alpha, int beta, int ply, 
+               int (* evalfn) (int, int *)) {
+  int i, max, ntm, newscore, * moves, * newboard;
+  int minchoice (int, int *, int, int (*) (int, int *)); 
+  if (ply == 0) return((* evalfn) (player, board));
+  moves = legalmoves(player, board);
+  for (i = 1; i <= moves[0]; i++) {
+    newboard = copyboard(board);
+    makemove(moves[i], player, newboard);
+    newscore = -helper(player, newboard, -beta, -alpha, ply - 1, evalfn);
+
+    if (newscore > beta) return newscore;
+
+    if (newscore > alpha){
+      alpha = newscore;
+    }
+    free(newboard);
+  }
+  free(moves);
+  return(alpha);
+}
+
+int alphabeta(int player, int * board, int ply, int (* evalfn) (int, int *)) {
+  int i, max, ntm, newscore, bestmove, * moves, * newboard;
+  int helper (int, int *, int, int (*) (int, int *)); 
+  moves  = legalmoves(player, board);
+
+  max = INT_MIN;
+
+  for (i = 1; i <= moves[0]; i++) {
+    newboard = copyboard(board);
+    makemove(moves[i], opponent(player), newboard);
+    newscore = ab_helper(player, newboard, INT_MIN, INT_MAX, ply - 1, evalfn);
+
+    if (newscore > max){
+      max = newscore;
+      bestmove = moves[i];
+    }
+    free(newboard);
+  }
+  free(moves);
+  return bestmove;
 }
 
 
@@ -706,6 +720,7 @@ int net6(int player, int * board) {
 void getmove (int (* strategy) (int, int *), int player, int * board, 
               int printflag) {
   int move;
+  int * dir = new int[8];
   if(player == BLACK)
 	  printf("BLACK view\n");
   else
@@ -714,7 +729,7 @@ void getmove (int (* strategy) (int, int *), int player, int * board,
   move = (* strategy)(player, board);
   if (legalp(move, player, board)) {
      if (printflag) printf("\n%c moves to %d\n", nameof(player), move);
-     makemove(move, player, board);
+     makemove(move, player, board, dir);
   }
   else {
      printf("Illegal move %d\n", move);
